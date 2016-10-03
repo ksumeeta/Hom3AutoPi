@@ -22,7 +22,7 @@ struct DeviceT{
 	uint8_t NodeID;
 	uint8_t Type;
 	uint8_t Ver;
-	uint32_t EncrKey;
+	uint8_t EncrKey[9];
 };
 
 DeviceT Device;
