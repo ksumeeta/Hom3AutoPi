@@ -30,17 +30,23 @@ CCFLAGS=-Ofast -mfpu=vfp -mfloat-abi=hard -march=$(ARCH) -mtune=arm1176jzf-s -st
 endif
 
 # define all programs
-PROGRAMS = RF24Mesh_Example_Master RF24Mesh_Example RF24MeshServer
+PROGRAMS = RF24MeshServer
 SOURCES = ${PROGRAMS:=.cpp}
 
 
-all: ${PROGRAMS}
+all: LibAES LibRF24Network ${PROGRAMS}
+
+LibAES: AES/AES.cpp
+	g++ ${CCFLAGS} -Wall -c AES/AES.cpp -o AES.o
+	
+LibRF24Network: RF24Network/RF24Network.cpp
+	g++ ${CCFLAGS} -Wall -c RF24Network/RF24Network.cpp -o RF24Network.o
 
 ${PROGRAMS}: ${SOURCES}
-	g++ ${CCFLAGS} -Wall -I../ -lrf24-bcm -lrf24network -lrf24mesh $@.cpp -o $@ AES.o
-	
-AES.o: AES/AES.cpp
-	g++ ${CCFLAGS} -Wall -c $^
+	g++ ${CCFLAGS} -Wall -I../ -lrf24-bcm -lrf24mesh $@.cpp -o $@ AES.o RF24Network.o
+
+
+
 
 clean:
 	rm -rf $(PROGRAMS)
