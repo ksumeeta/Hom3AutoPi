@@ -1,4 +1,4 @@
-struct DeviceT1 {
+struct DeviceT {
 	uint8_t NodeID;
 	uint8_t Type;
 	uint8_t Ver;
