@@ -10,9 +10,11 @@
 #include "RF24.h"
 #include "RF24Network.h"
 #include "RF24Mesh.h"
+#include "..\Mesh.h"
+#include "AES.h"
 #include <SPI.h>
 #include <EEPROM.h>
-//#include <ChaCha.h>
+
 
 
 /**** Configure the nrf24l01 CE and CS pins ****/
@@ -52,13 +54,7 @@ struct payload_t {
   unsigned long counter;
 };
 
-struct DeviceT {
-  uint8_t NodeID;
-  uint8_t Type;
-  uint8_t Ver;
-  uint8_t EncrKey[9];
-  uint8_t RandomID;
-};
+
 
 DeviceT Device;
 
