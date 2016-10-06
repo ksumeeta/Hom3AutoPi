@@ -11,19 +11,12 @@
   *
   */
   
-#include "RF24Mesh/RF24Mesh.h"  
-#include "RF24/RF24.h"
-#include "RF24Network/RF24Network.h"
-#include "AES/AES.h"
+#include "../../LibFolder/RF24Mesh/RF24Mesh.h"  
+#include "../../LibFolder/RF24/RF24.h"
+#include "../../LibFolder/RF24Network/RF24Network.h"
+#include "../../LibFolder/AES/AES.h"
+#include "../../MeshClient/Arduino/MeshClient/Mesh.h"
 
-
-struct DeviceT{
-	uint8_t NodeID;
-	uint8_t Type;
-	uint8_t Ver;
-	uint8_t EncrKey[9];
-	uint8_t RandomID;
-};
 
 DeviceT Device;
 
