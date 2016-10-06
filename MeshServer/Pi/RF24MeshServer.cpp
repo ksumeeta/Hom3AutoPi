@@ -30,14 +30,14 @@ uint32_t displayTimer=0;
 
 bool FindFreeNodeID(int k){
 	for(int i=0; i<mesh.addrListTop; i++){
-		if(mesh.addrList[i].nodeID!=i+1){
-			printf("%u\n",i+1);
-			break;
-		}else if(mesh.addrListTop==i+1){
-			printf("%u\n",i+1);
+		if(mesh.addrList[i].nodeID==k){
+			printf("found\%u",k);
+			return false;
 			break;
 		}
 	}
+	printf("Not found %u\n",k);
+	return true;
 }
 
 
@@ -64,12 +64,26 @@ int main(int argc, char** argv) {
 				case 0x7D:
 					network.read(header,&Device,sizeof(Device)); 
 					printf("Join Request From-->%u DeviceID-->%u DeviceType-->%u DeviceVersion-->%u RandomID-->%u\n",mesh.getNodeID(header.from_node),Device.NodeID,Device.Type,Device.Ver,Device.RandomID);
-					for(int i=0; i<mesh.addrListTop; i++){
-						if(mesh.addrList[i].nodeID!=i+1){
-							printf("%u\n",i+1);
-							break;
-						}else if(mesh.addrListTop==i+1){
-							printf("%u\n",i+1);
+					for(int k=1;k<255;k++){
+						printf("Finding node %u\n",k);
+						if(FindFreeNodeID(k)){
+							Device.NodeID=k;
+							Device.EncrKey[0]=0;
+							srand(millis());
+							for(int j=1;j<9;j++){
+								Device.EncrKey[j]=rand() % 255; // millis();
+								printf("Encrip-->%u -->%u; ",j,Device.EncrKey[j]);
+							}
+							printf("\n");
+							header.to_node=header.from_node;
+							header.from_node=0;
+							if(network.write(header,&Device,sizeof(Device))){
+								printf("Send Successfull\n");
+							}else{
+								printf("Retry sending..\n");
+							}
+							printf("send Node id %u and keys before breakout\n",k);
+							//if send is succussfull then update dhcplist with encryption keys;
 							break;
 						}
 					}
