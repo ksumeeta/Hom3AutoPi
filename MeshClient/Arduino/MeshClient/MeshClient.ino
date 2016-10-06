@@ -48,15 +48,7 @@ Serial.print("-->"); Serial.println(rr1);
 uint32_t displayTimer = 0;
 uint32_t displayTimer1 = 0;
 
-struct payload_t {
-  unsigned long ms;
-  unsigned long counter;
-};
-
-
-
 DeviceT Device;
-
 
 void GetDeviceID(){
   Serial.println("Getting Device ID and Joining the Network!!");
@@ -79,19 +71,21 @@ void GetDeviceID(){
     
     while (network.available()) {
       RF24NetworkHeader header;
-      payload_t payload;
-      
       network.peek(header);
-      uint8_t dat[16];
-  
-      network.read(header,&dat,sizeof(dat)); 
-      Serial.print("Data Reveived From: --> ");
-      Serial.print(header.from_node);
-      Serial.print(" For: --> ");
-      Serial.print(header.to_node);
-      Serial.print(" Value: --> ");
-      Serial.print(dat[0]); 
-      Serial.println("");
+      switch(header.type){
+        case 0x7D: 
+          network.read(header,&Device,sizeof(Device)); 
+          Serial.print("Received NodeID-->");Serial.println(Device.NodeID); 
+          for(int z=0;z<9;z++){
+            Serial.print("key-->");Serial.print(Device.EncrKey[z]);Serial.print("; ");
+          }
+          Serial.println(" ");
+          break;
+        default: 
+          network.read(header,0,0); 
+          Serial.println(header.type);
+          break;
+      }
     }
   }
 }
@@ -144,30 +138,21 @@ void loop() {
     }
   }
 
-  while (network.available()) {
-    RF24NetworkHeader header;
-    payload_t payload;
-    
-    network.peek(header);
-    uint32_t dat=0;
-
-    network.read(header,&dat,sizeof(dat)); 
-    Serial.print("Data Reveived From: --> ");
-    Serial.print(header.from_node);
-    Serial.print(" For: --> ");
-    Serial.print(header.to_node);
-    Serial.print(" Value: --> ");
-    Serial.print(dat); 
-    Serial.println("");
-
-
-    
-    network.read(header, &payload, sizeof(payload));
-    Serial.print("Received packet #");
-    Serial.print(payload.counter);
-    Serial.print(" at ");
-    Serial.println(payload.ms);
-  }
+//  while (network.available()) {
+//    RF24NetworkHeader header;
+//    
+//    network.peek(header);
+//    uint32_t dat=0;
+//
+//    network.read(header,&dat,sizeof(dat)); 
+//    Serial.print("Data Reveived From: --> ");
+//    Serial.print(header.from_node);
+//    Serial.print(" For: --> ");
+//    Serial.print(header.to_node);
+//    Serial.print(" Value: --> ");
+//    Serial.print(dat); 
+//    Serial.println("");    
+//  }
 }
 
 
