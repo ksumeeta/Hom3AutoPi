@@ -19,6 +19,7 @@
 
 
 DeviceT Device;
+DeviceT DeviceAll[255];
 
 
 
@@ -27,6 +28,7 @@ RF24Network network(radio);
 RF24Mesh mesh(radio,network);
 
 uint32_t displayTimer=0;
+uint32_t AllocateDevice=0;
 
 bool FindFreeNodeID(int k){
 	for(int i=0; i<mesh.addrListTop; i++){
@@ -62,30 +64,35 @@ int main(int argc, char** argv) {
 					printf("Received From-->%u Value-->%u\n",mesh.getNodeID(header.from_node),dat);
 					break;
 				case 0x7D:
-					network.read(header,&Device,sizeof(Device)); 
-					printf("Join Request From-->%u DeviceID-->%u DeviceType-->%u DeviceVersion-->%u RandomID-->%u\n",mesh.getNodeID(header.from_node),Device.NodeID,Device.Type,Device.Ver,Device.RandomID);
-					for(int k=1;k<255;k++){
-						printf("Finding node %u\n",k);
-						if(FindFreeNodeID(k)){
-							Device.NodeID=k;
-							Device.EncrKey[0]=0;
-							srand(millis());
-							for(int j=1;j<9;j++){
-								Device.EncrKey[j]=rand() % 255; // millis();
-								printf("Encrip-->%u -->%u; ",j,Device.EncrKey[j]);
+					network.read(header,&Device,sizeof(Device));
+					if((millis() - AllocateDevice > 10000) | (AllocateDevice == 0)){
+						printf("Join Request From-->%u DeviceID-->%u DeviceType-->%u DeviceVersion-->%u RandomID-->%u\n",mesh.getNodeID(header.from_node),Device.NodeID,Device.Type,Device.Ver,Device.RandomID);
+						for(int k=1;k<255;k++){
+							printf("Finding node %u\n",k);
+							if(FindFreeNodeID(k)){
+								Device.NodeID=k;
+								Device.EncrKey[0]=0;
+								srand(millis());
+								for(int j=1;j<9;j++){
+									Device.EncrKey[j]=rand() % 255; // millis();
+									printf("Encrip-->%u -->%u; ",j,Device.EncrKey[j]);
+								}
+								printf("\n");
+								header.to_node=header.from_node;
+								header.from_node=0;
+								if(network.write(header,&Device,sizeof(Device))){
+									AllocateDevice=millis();
+									printf("Send Successfull\n");
+								}else{
+									printf("Retry sending..\n");
+								}
+								printf("send Node id %u and keys before breakout\n",k);
+								//if send is succussfull then update dhcplist with encryption keys;
+								break;
 							}
-							printf("\n");
-							header.to_node=header.from_node;
-							header.from_node=0;
-							if(network.write(header,&Device,sizeof(Device))){
-								printf("Send Successfull\n");
-							}else{
-								printf("Retry sending..\n");
-							}
-							printf("send Node id %u and keys before breakout\n",k);
-							//if send is succussfull then update dhcplist with encryption keys;
-							break;
 						}
+					}else{
+						printf("Discarding Join Request!!\n");
 					}
 					break;
 				default:  network.read(header,0,0); 
