@@ -16,9 +16,11 @@
 #include "../../LibFolder/RF24Network/RF24Network.h"
 #include "../../LibFolder/AES/AES.h"
 #include "../../MeshClient/Arduino/MeshClient/Mesh.h"
+#include <fstream>
 
 
 DeviceT Device;
+DeviceT DeviceAll[255];
 
 
 
@@ -27,6 +29,29 @@ RF24Network network(radio);
 RF24Mesh mesh(radio,network);
 
 uint32_t displayTimer=0;
+uint32_t AllocateDevice=0;
+
+void SaveDevices(){
+	std::ofstream outfile ("devices.txt",std::ofstream::binary | std::ofstream::trunc);
+	for(int i=1; i< 255; i++){
+		outfile.write( (char*)&DeviceAll[i],sizeof(DeviceT));
+	}
+	outfile.close();
+}
+
+void LoadDevices(){
+	while(1){
+		std::ifstream infile ("devices.txt",std::ifstream::binary);
+		if(!infile){
+			SaveDevices();
+			printf("Creating Devices File\n");
+		}else{
+			break;
+			printf("Found Devices File\n");
+		}
+	}
+	printf("Reading Devices File\n");
+}
 
 bool FindFreeNodeID(int k){
 	for(int i=0; i<mesh.addrListTop; i++){
@@ -43,6 +68,8 @@ bool FindFreeNodeID(int k){
 
 
 int main(int argc, char** argv) {
+	
+	LoadDevices();
 	mesh.setNodeID(0);
 	printf("starting...\n");
 	mesh.begin();
@@ -56,36 +83,47 @@ int main(int argc, char** argv) {
 			RF24NetworkHeader header;
 			network.peek(header);
 			
-			uint32_t dat=0;
+			uint8_t dat[16];
 			switch(header.type){
 				case 'M': network.read(header,&dat,sizeof(dat)); 
-					printf("Received From-->%u Value-->%u\n",mesh.getNodeID(header.from_node),dat);
+					printf("Received From-->%u Value-->",mesh.getNodeID(header.from_node));
+					for(int zi=0;zi<16;zi++){
+						printf("%u ",dat[zi]);
+					}
+					printf("\n");
 					break;
 				case 0x7D:
-					network.read(header,&Device,sizeof(Device)); 
-					printf("Join Request From-->%u DeviceID-->%u DeviceType-->%u DeviceVersion-->%u RandomID-->%u\n",mesh.getNodeID(header.from_node),Device.NodeID,Device.Type,Device.Ver,Device.RandomID);
-					for(int k=1;k<255;k++){
-						printf("Finding node %u\n",k);
-						if(FindFreeNodeID(k)){
-							Device.NodeID=k;
-							Device.EncrKey[0]=0;
-							srand(millis());
-							for(int j=1;j<9;j++){
-								Device.EncrKey[j]=rand() % 255; // millis();
-								printf("Encrip-->%u -->%u; ",j,Device.EncrKey[j]);
+					network.read(header,&Device,sizeof(Device));
+					if((millis() - AllocateDevice > 10000) | (AllocateDevice == 0)){
+						printf("Join Request From-->%u DeviceID-->%u DeviceType-->%u DeviceVersion-->%u RandomID-->%u\n",mesh.getNodeID(header.from_node),Device.NodeID,Device.Type,Device.Ver,Device.RandomID);
+						for(int k=1;k<255;k++){
+							printf("Finding node %u\n",k);
+							if(FindFreeNodeID(k)){
+								Device.NodeID=k;
+								Device.EncrKey[0]=0;
+								srand(millis());
+								for(int j=1;j<9;j++){
+									Device.EncrKey[j]=rand() % 255; // millis();
+									printf("Encrip-->%u -->%u; ",j,Device.EncrKey[j]);
+								}
+								printf("\n");
+								header.to_node=header.from_node;
+								header.from_node=0;
+								if(network.write(header,&Device,sizeof(Device))){
+									AllocateDevice=millis();
+									printf("Send Successfull\n");
+									DeviceAll[k]=Device;
+									SaveDevices();
+								}else{
+									printf("Retry sending..\n");
+								}
+								printf("send Node id %u and keys before breakout\n",k);
+								//if send is succussfull then update dhcplist with encryption keys;
+								break;
 							}
-							printf("\n");
-							header.to_node=header.from_node;
-							header.from_node=0;
-							if(network.write(header,&Device,sizeof(Device))){
-								printf("Send Successfull\n");
-							}else{
-								printf("Retry sending..\n");
-							}
-							printf("send Node id %u and keys before breakout\n",k);
-							//if send is succussfull then update dhcplist with encryption keys;
-							break;
 						}
+					}else{
+						printf("Discarding Join Request!!\n");
 					}
 					break;
 				default:  network.read(header,0,0); 
