@@ -47,16 +47,24 @@ Serial.print("-->"); Serial.println(rr1);
 
 uint32_t displayTimer = 0;
 uint32_t displayTimer1 = 0;
+uint8_t RandomID;
 
 DeviceT Device;
+
+
+void ResetDevice(){
+  asm volatile ("  jmp 0");  
+} 
 
 void GetDeviceID(){
   Serial.println("Getting Device ID and Joining the Network!!");
   while(1){
     mesh.update();
-    if (millis() - displayTimer >= 10000) {
+    if (millis() - displayTimer >= 5000) {
       displayTimer = millis();
       Device.RandomID=random(0,255);
+      RandomID = Device.RandomID;
+      Serial.print(RandomID);Serial.print("-->");Serial.print(Device.RandomID);Serial.println("");
       if (!mesh.write(&Device, 0x7D ,sizeof(Device))){
         if ( ! mesh.checkConnection() ) {
           Serial.println("Renewing Address");
@@ -75,11 +83,26 @@ void GetDeviceID(){
       switch(header.type){
         case 0x7D: 
           network.read(header,&Device,sizeof(Device)); 
-          Serial.print("Received NodeID-->");Serial.println(Device.NodeID); 
-          for(int z=0;z<9;z++){
-            Serial.print("key-->");Serial.print(Device.EncrKey[z]);Serial.print("; ");
-          }
-          Serial.println(" ");
+          Serial.print(RandomID);Serial.print("-->");Serial.print(Device.RandomID);Serial.println("");
+          //if(RandomID == Device.RandomID){
+            //**********************************************************
+            Serial.print("Received NodeID-->");Serial.println(Device.NodeID); 
+            for(int z=0;z<9;z++){
+              Serial.print("key-->");Serial.print(Device.EncrKey[z]);Serial.print("; ");
+            }
+            Serial.println(" ");
+            //**********************************************************
+            EEPROM.write(0,Device.NodeID);
+            EEPROM.write(1,Device.Type);
+            EEPROM.write(2,Device.Ver);
+            EEPROM.write(3,Device.Channel);
+            EEPROM.write(4,Device.PaPower);
+            EEPROM.write(5,Device.RandomID);
+            for(int i=0;i<9;i++){
+              EEPROM.write(5+i,Device.EncrKey[i-1]);
+            }
+          //}
+          ResetDevice();
           break;
         default: 
           network.read(header,0,0); 
@@ -94,22 +117,34 @@ void GetDeviceID(){
 
 void setup() {
   
-  
   Serial.begin(115200);
   displayTimer = millis();
   randomSeed(analogRead(0));
   
-  Device.NodeID=0xff;//EEPROM.read(0);
+  Device.NodeID=EEPROM.read(0);
+  Device.NodeID=255;
   Device.Type=EEPROM.read(1);
   Device.Ver=EEPROM.read(2);
-  //Device.EncrKey=(EEPROM.read(3) * 256) + (EEPROM.read(4));
-  for(int i=0;i<8;i++){
-    Device.EncrKey[i]=EEPROM.read(3+i);
+  Device.Channel=EEPROM.read(3);
+  Device.PaPower=EEPROM.read(4);
+  Device.RandomID=EEPROM.read(5);
+  for(int i=1;i<=9;i++){
+    Device.EncrKey[i-1]=EEPROM.read(5+i);
   }
   mesh.setNodeID(Device.NodeID);
   Serial.println(F("Connecting to the mesh..."));
-  mesh.begin();
-  if(Device.NodeID==0xff){
+  while(1){
+    if (millis() - displayTimer >= 5000){
+      displayTimer = millis();
+      if(mesh.begin()){
+        Serial.println("Found Mesh");
+        break;
+      }else{
+        Serial.println("Mesh not found");
+      }
+    }
+  }
+  if(Device.NodeID==255){
     GetDeviceID();
   }
 }
