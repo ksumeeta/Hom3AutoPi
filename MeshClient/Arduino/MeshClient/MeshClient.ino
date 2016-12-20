@@ -62,7 +62,7 @@ void GetDeviceID(){
     mesh.update();
     if (millis() - displayTimer >= 5000) {
       displayTimer = millis();
-      Device.RandomID=random(0,255);
+      Device.RandomID=5;//random(0,255);
       RandomID = Device.RandomID;
       Serial.print(RandomID);Serial.print("-->");Serial.print(Device.RandomID);Serial.println("");
       if (!mesh.write(&Device, 0x7D ,sizeof(Device))){
@@ -123,11 +123,22 @@ void setup() {
   
   Device.NodeID=EEPROM.read(0);
   Device.NodeID=255;
+  
   Device.Type=EEPROM.read(1);
+  Device.Type=2;
+  
   Device.Ver=EEPROM.read(2);
+  Device.Ver=2;
+  
   Device.Channel=EEPROM.read(3);
+  Device.Channel=2;
+  
   Device.PaPower=EEPROM.read(4);
+  Device.PaPower=2;
+  
   Device.RandomID=EEPROM.read(5);
+  Device.RandomID=1;
+  
   for(int i=1;i<=9;i++){
     Device.EncrKey[i-1]=EEPROM.read(5+i);
   }
